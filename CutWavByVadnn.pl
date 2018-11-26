@@ -6,6 +6,13 @@ use threads;
 use Encode;
 
 my $jsonparser = new JSON;
+
+if(scalar(@ARGV) != 2)
+{
+	print "Usage : perl CutWavByVadnn.pl input threadnum\n";
+	exit;
+}
+
 open(IN,$ARGV[0])||die("The file can't find!\n");
 
 &Main();
