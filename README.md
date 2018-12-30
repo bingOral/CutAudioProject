@@ -11,7 +11,13 @@
 ### 3.输出：
 - a.格式为json的input文件，详细格式如下：
 ```
-
+{
+  "filename" : "",     #wavname
+  "url": "",           #url
+  "info": "",          #text
+  "time": "",          #timestampt
+  "subwav":[]          
+}
 
 ```
 
