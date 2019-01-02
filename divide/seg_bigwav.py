@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2.7
 #~ -*- utf8 -*-
 
 import sys
@@ -30,7 +30,7 @@ res = sys.argv[1]
 try:
     fin = open( res, "r" )
 except IOError:
-    print "Open file [%s] failed!\n" % res
+    print("Open file [%s] failed!\n") % res
     exit
 
 for line in fin.readlines():
@@ -43,7 +43,7 @@ for line in fin.readlines():
     try:
         f = open( filename , "rb" )
     except IOError:
-        print "Open file [%s] failed!\n" % filename
+        print("Open file [%s] failed!\n") % filename
         fin.close()
         exit
     data = f.read()
@@ -64,7 +64,7 @@ for line in fin.readlines():
     postfix_len = len(str(total_seg))
     for i in range( 0, len(intervals), 2 ):  # one sub file
         count = i/2 + 1
-	fileout_temp = "%s{0}-{1:0{2}d}.wav" % sys.argv[4]
+        fileout_temp = "%s{0}-{1:0{2}d}.wav"% sys.argv[4]
         fileout = fileout_temp.format(filename_base, count, postfix_len)
         #print fileout, intervals[i], intervals[i+1]
         if intervals[i] - fade_in < 0:
@@ -89,7 +89,7 @@ for line in fin.readlines():
             with sf.SoundFile(fileout,'w',16000,1) as f:
                 f.write(np.array(pcm,dtype=np.int16))
         except IOError:
-            print "Open file [%s] failed!\n" % fileout
+            print("Open file [%s] failed!\n") % fileout
             fin.close()
             exit
 fin.close()
