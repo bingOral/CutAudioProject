@@ -65,43 +65,60 @@ sub dowork
 
 		my $json = $jsonparser->decode($row);
 		my $filename = $json->{filename};
-	
-		my $flag = getStatus($filename);
-		if(-e $filename and $flag)
+
+		if(-e $filename)
 		{
-			my $lab = qx(./divide/vadnn_divide -m ./divide/am.dat $filename);
-
-			my $random = qx(uuidgen);
-			$random =~ s/[\r\n]//g;
-			my $logfile = "log/log-$random.txt";
-			open(OUT,">$logfile")||die("The file can't create!\n");
-			print OUT $lab;
-
-			my $dir;
-			if($filename =~ /(.*\/.*).wav/)
-			{
-				$dir = $1.'/';
-			}
-
-			$dir =~ s/wav/vadnn/;
-			unless(-d $dir)
-			{
-				qx(mkdir -p $dir);	
-			}
-			
-			system("python ./divide/seg_bigwav.py $logfile 0 0 $dir");
-
-			my $str = "find $dir -name '*.wav'|";
-			open(TEMP,$str)||die("The file can't find!\n");
-			while(my $row = <TEMP>)
-			{
-				chomp($row);
-				push @{$json->{subwav}},$row;
-			}
-
-			print $jsonparser->encode($json)."\n";
+			my $flag = getStatus($filename);
+			my $subwav_dir = CutWavByVadnn($filename) if $flag;
+			getResult($json,$subwav_dir,$jsonparser);
 		}
 	}
+}
+
+sub CutWavByVadnn
+{
+	my $filename = shift;
+
+	my $lab = qx(./divide/vadnn_divide -m ./divide/am.dat $filename);
+
+	my $random = qx(uuidgen);
+	$random =~ s/[\r\n]//g;
+	my $logfile = "log/log-$random.txt";
+	open(OUT,">$logfile")||die("The file can't create!\n");
+	print OUT $lab;
+
+	my $dir;
+	if($filename =~ /(.*\/.*).wav/)
+	{
+		$dir = $1.'/';
+	}
+
+	$dir =~ s/wav/vadnn/;
+	unless(-d $dir)
+	{
+		qx(mkdir -p $dir);	
+	}
+	
+	system("python ./divide/seg_bigwav.py $logfile 0 0 $dir");
+
+	return $dir;
+}
+
+sub getResult
+{
+	my $json = shift;
+	my $dir = shift;
+	my $jsonparser = shift;
+
+	my $str = "find $dir -name '*.wav'|";
+	open(TEMP,$str)||die("The file can't find!\n");
+	while(my $row = <TEMP>)
+	{
+		chomp($row);
+		push @{$json->{subwav}},$row;
+	}
+
+	print $jsonparser->encode($json)."\n";
 }
 
 sub getStatus
@@ -126,4 +143,3 @@ sub getStatus
 }
 
 1;
-
