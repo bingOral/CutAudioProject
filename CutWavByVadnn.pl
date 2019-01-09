@@ -107,19 +107,15 @@ sub dowork
 sub getStatus
 {
 	my $file = shift;
-	my $subfile;
 	my $dir;
 
 	if($file =~ /(.*\/(.*)).wav/)
 	{
 		$dir = $1.'/';
-		$subfile = $2;
 		$dir =~ s/\/wav\//\/vadnn\//;
-		$subfile =~ s/$/-001.wav/;
 	}	
 	
-	#print $dir.$subfile."\n";
-	if(-e $dir.$subfile)
+	if(-e $dir)
 	{
 		return 0;
 	}
