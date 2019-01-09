@@ -68,9 +68,10 @@ sub dowork
 
 		if(-e $filename)
 		{
-			my $flag = getStatus($filename);
-			my $subwav_dir = CutWavByVadnn($filename) if $flag;
+			my ($flag,$subwav_dir) = getStatus($filename);
+			CutWavByVadnn($filename) if $flag;
 			getResult($json,$subwav_dir,$jsonparser);
+			#die;
 		}
 	}
 }
@@ -100,8 +101,6 @@ sub CutWavByVadnn
 	}
 	
 	system("python ./divide/seg_bigwav.py $logfile 0 0 $dir");
-
-	return $dir;
 }
 
 sub getResult
@@ -134,11 +133,11 @@ sub getStatus
 	
 	if(-e $dir)
 	{
-		return 0;
+		return 0,$dir;
 	}
 	else
 	{
-		return 1;
+		return 1,$dir;
 	}
 }
 
