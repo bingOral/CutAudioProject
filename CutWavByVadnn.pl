@@ -65,7 +65,9 @@ sub dowork
 
 		my $json = $jsonparser->decode($row);
 		my $filename = $json->{filename};
-		if( -e $filename)
+	
+		my $flag = getStatus($filename);
+		if(-e $filename and $flag)
 		{
 			my $lab = qx(./divide/vadnn_divide -m ./divide/am.dat $filename);
 
@@ -99,6 +101,31 @@ sub dowork
 
 			print $jsonparser->encode($json)."\n";
 		}
+	}
+}
+
+sub getStatus
+{
+	my $file = shift;
+	my $subfile;
+	my $dir;
+
+	if($file =~ /(.*\/(.*)).wav/)
+	{
+		$dir = $1.'/';
+		$subfile = $2;
+		$dir =~ s/\/wav\//\/vadnn\//;
+		$subfile =~ s/$/-001.wav/;
+	}	
+	
+	#print $dir.$subfile."\n";
+	if(-e $dir.$subfile)
+	{
+		return 0;
+	}
+	else
+	{
+		return 1;
 	}
 }
 
