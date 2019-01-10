@@ -114,7 +114,7 @@ sub getResult
 	foreach my $row (@files)
 	{
 		chomp($row);
-		push @{$json->{subwav}},$dir.$row;
+		push @{$json->{subwav}},$dir.$row if $row =~ /wav$/;
 	}
 
 	print $jsonparser->encode($json)."\n";
