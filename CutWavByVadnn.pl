@@ -109,12 +109,12 @@ sub getResult
 	my $dir = shift;
 	my $jsonparser = shift;
 
-	my $str = "find $dir -name '*.wav'|";
-	open(TEMP,$str)||die("The file can't find!\n");
-	while(my $row = <TEMP>)
+	opendir(DIR,$dir)||die("The dir can't open!\n");
+	my @files = readdir DIR;
+	foreach my $row (@files)
 	{
 		chomp($row);
-		push @{$json->{subwav}},$row;
+		push @{$json->{subwav}},$dir.$row;
 	}
 
 	print $jsonparser->encode($json)."\n";
