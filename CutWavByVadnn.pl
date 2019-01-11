@@ -66,7 +66,7 @@ sub dowork
 		my $json = $jsonparser->decode($row);
 		my $filename = $json->{filename};
 
-		if(-e $filename)
+		if(-e $filename and $filename =~ /wav$/)
 		{
 			my ($flag,$subwav_dir) = getStatus($filename);
 			CutWavByVadnn($filename) if $flag;
