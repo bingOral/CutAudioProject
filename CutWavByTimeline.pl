@@ -4,6 +4,7 @@ use strict;
 use JSON;
 use Encode;
 use File::Copy;
+use Try::Tiny;
 
 if(scalar(@ARGV) != 2)
 {
@@ -33,9 +34,8 @@ sub dowork
 		my $dir = getDir($movie);
 		if($srt)
 		{
-			my $json = getJson($srt);
-			print "wav : ".$wav."\nsrt : ".$srt."\ndir : ".$dir."\njson : ".$json."\n";
-
+			my $json = srt2json($srt);
+			print "wav : ".$wav."\nsrt : ".$srt."\ndir : ".$dir."\n";
 			cut($wav,$dir,$json);
 		}
 		#die;
@@ -95,7 +95,6 @@ sub getSrt
 	else
 	{
 		$srt = search($movie,$dir);
-		#qx(iconv -f UTF-16LE -t UTF-8 $srt -o $srt);
 
 		if($srt)
 		{
@@ -108,25 +107,11 @@ sub getSrt
 	}
 }
 
-sub getJson
-{
-	my $srt = shift;
-	my $str = "perl script/srt2json.pl -f $srt -v";
-	print $str."\n";
-	system($str);
-	return $srt.'.json';
-}
-
 sub cut
 {
 	my $wav = shift;
 	my $dir = shift;
-	my $json = shift;
-
-	my $res;
-	my $jsonparser = new JSON;
-	open(IN,$json)||die("The file can't find!\n");
-	my $content = <IN>;
+	my $res = shift;
 
 	my $prefix;
 	if($wav =~ /.*\/(.*).wav/)
@@ -134,23 +119,25 @@ sub cut
 		$prefix = $1;
 	}
 
-	my $res = $jsonparser->decode($content);
-	for(my $i = 0; $i < scalar(@$res); $i++)
+	try
+	{	
+		for(my $i = 0; $i < scalar(@$res); $i++)
+		{
+			my $start_time = $res->[$i]->{start_time};
+			my $end_time = $res->[$i]->{end_time};
+			my $texts = $res->[$i]->{text};
+			
+			my $filename = $dir.'/'.$prefix.'-'.($i+1).'.wav';	
+        		my $str = "ffmpeg -v quiet -y -i ".$wav." -ss ".$start_time." -to ".$end_time." -acodec copy ".$filename;
+			print $str."\n";
+			system($str) unless -e $filename;
+			print OUT $filename."|".formater($texts)."\n";
+		}
+	}
+	catch
 	{
-		my $start_time = $res->[$i]->{start_time};
-		my $end_time = $res->[$i]->{end_time};
-		my $texts = $res->[$i]->{subtitle};
-		
-		$start_time =~ s/,/./;
-		$end_time =~ s/,/./;
-		$texts =~ s/\n/&/;
-	
-		my $filename = $dir.'/'.$prefix.'-'.($i+1).'.wav';	
-        	my $str = "ffmpeg -v quiet -y -i ".$wav." -ss ".$start_time." -to ".$end_time." -acodec copy ".$filename;
-		print $str."\n";
-		system($str) unless -e $filename;
-		print OUT $filename."|".formater($texts)."\n";
-	}	
+		print "Error : ".$wav." !\n";
+	}
 }
 
 sub formater
@@ -205,6 +192,51 @@ sub pro
 
 	copy($filename,$newname) unless -e $newname;
 	return $newname;		
+}
+
+sub srt2json
+{
+	my $file = shift;
+
+	open(IN,$file)||die("The file can't find!\n");
+
+	my $buffer;
+	my $res;
+	my $rtn;
+
+	while(my $row = <IN>)
+	{
+		$row =~ s/[\r\n]//g;
+		$buffer .= $row.'|';
+	
+		if($row =~ /^\s*$/)
+		{
+			push @$res,$buffer;
+			$buffer = "";
+		}
+	}
+	
+	foreach my $row (@$res)
+	{
+		chomp($row);
+		my @arr = split(/\|/,$row);
+		my @times = split(/ --> /,$arr[1],2);
+	
+		my $start_time = $times[0];
+		$start_time =~ s/,/./;
+		my $end_time = $times[1];
+		$end_time =~ s/,/./;
+		
+		my $text = $row;
+		$text =~ s/$arr[1]|^\d+\|+|\|+$//g;
+	
+		my $var;
+		$var->{start_time} = $start_time;
+		$var->{end_time} = $end_time;
+		$var->{text} = $text;
+		push @$rtn,$var;
+	}
+	return $rtn;
 }
 
 1;
