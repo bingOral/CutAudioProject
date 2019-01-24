@@ -5,6 +5,7 @@ use JSON;
 use Encode;
 use File::Copy;
 use Try::Tiny;
+use Search::Elasticsearch;
 
 if(scalar(@ARGV) != 3)
 {
@@ -17,6 +18,8 @@ open(OUT,">$ARGV[1]")||die("The file can't find!\n");
 open(ERR,">$ARGV[2]")||die("The file can't find!\n");
 
 my @task = <IN>;
+my $es = Search::Elasticsearch->new(nodes=>['192.168.1.20:9200'], cxn_pool => 'Sniff');
+
 dowork(\@task);
 
 sub dowork
@@ -133,15 +136,43 @@ sub cut
 			
 			my $filename = $dir.'/'.$prefix.'-'.($i+1).'.wav';	
         		my $str = "ffmpeg -v quiet -y -i '".$wav."' -ss ".$start_time." -to ".$end_time." -acodec copy '".$filename."'";
-			#print $str."\n";
 			system($str) unless -e $filename;
+
 			print OUT $filename."&".textFormatter($texts)."\n";
+			&insertElastic($filename,textFormatter($texts));
 		}
 	}
 	catch
 	{
 		print ERR "Error : ".$wav." !\n";
 	}
+}
+
+sub getWavLength
+{
+	my $file = shift;
+	my $length = qx(python script/getWavLength.py $file);
+	$length =~ s/[\r\n]//g;
+	return $length;
+}
+
+sub insertElastic
+{
+	my $filename = shift;
+	my $text = shift;
+	
+	my $length = &getWavLength($filename);
+	$es->index(
+		index   => 'callserv_movie_data_english',
+		type    => 'data',
+		id      => $filename,
+		body    => {
+			wavname => $filename,
+			text    => $text,
+			length  => $length,
+			flag    => 'Desperate Housewives'
+    		}
+	);	
 }
 
 sub textFormatter 
