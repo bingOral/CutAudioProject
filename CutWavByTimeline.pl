@@ -6,14 +6,15 @@ use Encode;
 use File::Copy;
 use Try::Tiny;
 
-if(scalar(@ARGV) != 2)
+if(scalar(@ARGV) != 3)
 {
-	print "Usage : perl $0 infile outfile\n";
+	print "Usage : perl $0 infile outfile errfile\n";
 	exit;
 }
 
 open(IN,$ARGV[0])||die("The file can't find!\n");
 open(OUT,">$ARGV[1]")||die("The file can't find!\n");
+open(ERR,">$ARGV[2]")||die("The file can't find!\n");
 
 my @task = <IN>;
 dowork(\@task);
@@ -24,16 +25,16 @@ sub dowork
 	foreach my $movie (@$task)
 	{
 		chomp($movie);
-
-		print "Before :".$movie."\n";
-		$movie = pro($movie);
-		print "After  :".$movie."\n";
-
-		my $wav = formate($movie);
 		my $srt = getSrt($movie);
-		my $dir = getDir($movie);
+
 		if($srt)
 		{
+			print "Before :".$movie."\n";
+			$movie = pro($movie);
+			print "After  :".$movie."\n";
+
+			my $wav = wavFormatter($movie);
+			my $dir = getDir($movie);
 			my $json = srt2json($srt);
 			print "wav : ".$wav."\nsrt : ".$srt."\ndir : ".$dir."\n";
 			cut($wav,$dir,$json);
@@ -56,7 +57,7 @@ sub getDir
 	return $dir;
 }
 
-sub formate
+sub wavFormatter
 {
 	my $movie = shift;
 	my $wav;
@@ -66,7 +67,7 @@ sub formate
 		$wav = $1.'.wav';
 	}
 
-	my $str = "ffmpeg -v quiet -y -i $movie -f wav -ar 16000 -ac 1 $wav";
+	my $str = "ffmpeg -v quiet -y -i '$movie' -f wav -ar 16000 -ac 1 '$wav'";
 	print $str."\n";
 	system($str) unless -e $wav;
 	return $wav;
@@ -78,13 +79,16 @@ sub getSrt
 	my $ass;
 	my $srt;
 	my $dir;
+	my $web_srt;
 	
-	if($movie =~ /((.*\/).*).mkv/)
+	if($movie =~ /((.*\/)(.*)).mkv/)
 	{
 		$ass = $1.'.ass';
 		$srt = $1.'.srt';
 		$dir = $2;
+		$web_srt = '/tvshows/'.$3.'.en.srt';
 	}
+	return $web_srt if -e $web_srt;
 
 	if( -e $ass)
 	{	
@@ -128,19 +132,19 @@ sub cut
 			my $texts = $res->[$i]->{text};
 			
 			my $filename = $dir.'/'.$prefix.'-'.($i+1).'.wav';	
-        		my $str = "ffmpeg -v quiet -y -i ".$wav." -ss ".$start_time." -to ".$end_time." -acodec copy ".$filename;
-			print $str."\n";
+        		my $str = "ffmpeg -v quiet -y -i '".$wav."' -ss ".$start_time." -to ".$end_time." -acodec copy '".$filename."'";
+			#print $str."\n";
 			system($str) unless -e $filename;
-			print OUT $filename."|".formater($texts)."\n";
+			print OUT $filename."&".textFormatter($texts)."\n";
 		}
 	}
 	catch
 	{
-		print "Error : ".$wav." !\n";
+		print ERR "Error : ".$wav." !\n";
 	}
 }
 
-sub formater
+sub textFormatter 
 {
         my $info = shift;
         unless(Encode::is_utf8($info))
